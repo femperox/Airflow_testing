@@ -1,7 +1,7 @@
 from airflow import DAG
 
 from airflow.operators.dummy import DummyOperator
-from airflow.operators.email import EmailOperator
+from airflow.decorators import task
 
 from datetime import datetime
 
@@ -18,11 +18,27 @@ with DAG('TESTING',
 		 default_args = args
 		 ) as dag:
 
-		 task1 = DummyOperator(task_id = 'start')
+		 @task
+		 def ret_one():
+		 	return 1
 
-		 task2 = EmailOperator(task_id= 'email',
-							   to = "ifilchukova1@gmail.com",
-							   subject= 'testing',
-							   html_content= 'hello')
+		 @task
+		 def get_one(one):
+			 print(f'got {one}')
 
-		 task1 >> task2
+		 task0 = DummyOperator(task_id = 'start')
+
+		 task11 = DummyOperator(task_id = 't11')
+		 task12 = DummyOperator(task_id='t12')
+		 task21 = DummyOperator(task_id='t21')
+		 task22 = DummyOperator(task_id='t22')
+		 task3 = DummyOperator(task_id='t3')
+
+
+		 one = ret_one()
+
+
+		 task0 >> [task12, task11]
+		 task11 >> task21
+		 task12 >> task22
+		 [task21, task22] >> task3 >> get_one(one)
