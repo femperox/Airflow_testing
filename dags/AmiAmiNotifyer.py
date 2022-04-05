@@ -3,9 +3,7 @@
 '''
 
 from airflow import DAG
-from airflow.operators.bash import BashOperator
 from airflow.operators.python import PythonOperator, BranchPythonOperator
-from airflow.providers.postgres.operators.postgres import PostgresOperator
 from airflow.models import Variable
 from airflow.operators.email import EmailOperator
 from airflow.providers.postgres.hooks.postgres import PostgresHook
@@ -13,8 +11,6 @@ from airflow.utils.trigger_rule import TriggerRule
 from airflow.models import XCom
 
 from datetime import datetime
-import json
-from pprint import pprint
 from bs4 import BeautifulSoup
 import requests
 
@@ -104,26 +100,34 @@ with DAG ( 'AmiAmiNotifyer',
         result = cursor.fetchall()
 
         content = """
-        <table width="AUTO" border="1" cellpadding="4" cellspacig="0">
+        <table width="AUTO" border="1" cellpadding="0" cellspacig="0">
         <tr><th>Товар</th><th>Цена в йенах</th><th>Изображение</th>
         """
 
         for row in result:
             content += '<tr>'
-            content += '<td>'+f'<a href="{row[4]}">{row[1]}"</a>'+'</td>'
-            content += '<td>'+str(row[2])+'</td>'
-            content += '<td>'+f'<img src="{row[3]}" alt="{row[1]}" title="{row[1]}"/>'+'</td>'
+            content += '<td align="center">'+f'<span style="font-size: 13pt"><a href="{row[4]}">{row[1]}</a>'+'</span></td>'
+            content += '<td align="center"><span style="font-size: 13pt">'+str(row[2])+'</span></td>'
+            content += '<td align="center">'+f'<img src="{row[3]}" alt="{row[1]}" title="{row[1]}" width ="50%" height = "50%"/>'+'</td>'
             content += '</tr>'
         content += '</table>'
 
-        pprint(content)
 
-        content = 'Привет, сегодня в подборке: \n' + content
+        amaount = task_instance.xcom_pull(key='branching_amount')
+
+        content = f'<p><span style="font-size: 13pt">Привет, сегодня в подборке предзаказов {amaount} новых товаров: <span style="font-size: 13pt"></p><br>' + content + '</br>'
 
         task_instance.xcom_push(key='email', value=content)
 
-    def make_notok_email():
-        pass
+
+    def make_notok_email(**context):
+
+        task_instance = context['task_instance']
+
+        content = '<p><span style="font-size: 13pt">Привет, сегодня в подборке нет новых товаров!<span style="font-size: 13pt"></p>'
+
+        task_instance.xcom_push(key='email', value=content)
+
 
     task_get_info = PythonOperator(
         task_id = 'task_get_info',
